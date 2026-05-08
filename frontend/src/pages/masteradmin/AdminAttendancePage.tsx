@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { adminAttendanceApi, AdminAttendanceRecord, CorrectionPayload } from '../../services/adminAttendanceApi'
-import type { AttendanceDashboard } from '../../services/adminAttendanceApi'
+import { adminAttendanceApi, type AdminAttendanceRecord, type CorrectionPayload, type AttendanceDashboard } from '../../services/adminAttendanceApi'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
