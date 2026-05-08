@@ -14,14 +14,19 @@ from .views import (
     MomLiveView,
     MomLiveAttendanceUpdateView,
     MomCompleteView,
+    MomStartView,
     MomAddParticipantsView,
     MeetingInfoView,
+    MeetingQRGenerateView,
+    MeetingAttendanceByQRView,
+    MeetingAttendanceByCodeView,
+    MeetingAttendanceLogView,
 )
 
 urlpatterns = [
     path('api/v1/mom/schedule/', MomCreateView.as_view(), name='mom-schedule'),
     path('api/v1/mom/list/', MomListView.as_view(), name='mom-list'),
-    path('api/v1/mom/<int:pk>/', MomUpdateView.as_view(), name='mom-update'),  # Use MomUpdateView for GET, PUT, PATCH
+    path('api/v1/mom/<int:pk>/', MomUpdateView.as_view(), name='mom-update'),
     path('api/v1/mom/<int:pk>/delete/', MomDeleteView.as_view(), name='mom-delete'),
     path('api/v1/mom/<int:mom_id>/participants/<int:user_id>/response/', ParticipantResponseView.as_view(), name='participant-response'),
     path('api/v1/mom/<int:mom_id>/response/<int:user_id>/accept/', ParticipantAcceptView.as_view(), name='participant-accept'),
@@ -30,11 +35,14 @@ urlpatterns = [
     path('api/v1/mom/<int:pk>/live/', MomLiveView.as_view(), name='mom-live'),
     path('api/v1/mom/<int:pk>/live/attendance/', MomLiveAttendanceUpdateView.as_view(), name='mom-live-attendance-update'),
     path('api/v1/mom/<int:pk>/complete/', MomCompleteView.as_view(), name='mom-complete'),
+    path('api/v1/mom/<int:pk>/start/', MomStartView.as_view(), name='mom-start'),
     path('api/v1/mom/<int:pk>/participants/add/', MomAddParticipantsView.as_view(), name='mom-add-participants'),
     path('api/v1/mom/<int:mom_id>/info/', MeetingInfoView.as_view(), name='meeting-info'),
     path('api/v1/mom/csrf-token/', CsrfTokenView.as_view(), name='csrf-token'),
-    path('api/v1/users/', UsersByDepartmentListView.as_view(), name='users-by-department'),  # Added endpoint for users by department
-    
-    # Note: Notification endpoints have been moved to /auth/notifications/
-    # All MOM notifications now use the common WebSocket notification system
+    path('api/v1/users/', UsersByDepartmentListView.as_view(), name='users-by-department'),
+    # QR & Attendance
+    path('api/v1/mom/<int:pk>/qr/', MeetingQRGenerateView.as_view(), name='mom-qr-generate'),
+    path('api/v1/mom/attendance/qr/', MeetingAttendanceByQRView.as_view(), name='mom-attendance-qr'),
+    path('api/v1/mom/<int:pk>/attendance/code/', MeetingAttendanceByCodeView.as_view(), name='mom-attendance-code'),
+    path('api/v1/mom/<int:pk>/attendance/log/', MeetingAttendanceLogView.as_view(), name='mom-attendance-log'),
 ]

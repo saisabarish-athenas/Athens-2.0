@@ -107,7 +107,7 @@ class RequireTenantPermission(permissions.BasePermission):
             raise PermissionDenied({"error": "TENANT_CONTEXT_REQUIRED", "message": "Tenant context missing"})
         
         user_type = getattr(request.user, 'user_type', None)
-        if user_type in ['projectadmin']:
+        if user_type in ['projectadmin', 'companyuser', 'adminuser']:
             return True
         
         return False

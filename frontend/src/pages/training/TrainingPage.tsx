@@ -4,20 +4,24 @@ import { PlusOutlined, DashboardOutlined, UnorderedListOutlined } from '@ant-des
 import TrainingLanding from './TrainingLanding';
 import TrainingList from './components/TrainingList';
 import TrainingForm from './components/TrainingForm';
+import { getTrainingTypeMeta } from './trainingTypes';
 
 const TrainingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTraining, setEditingTraining] = useState<any>(null);
   const [viewingTraining, setViewingTraining] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleCreate = useCallback(() => {
     setEditingId(null);
+    setEditingTraining(null);
     setActiveTab('form');
   }, []);
 
   const handleEdit = useCallback((training: any) => {
     setEditingId(training.id);
+    setEditingTraining(training);
     setActiveTab('form');
   }, []);
 
@@ -27,6 +31,7 @@ const TrainingPage: React.FC = () => {
 
   const handleFormSuccess = useCallback(() => {
     setEditingId(null);
+    setEditingTraining(null);
     setActiveTab('list');
     // Increment refreshKey to trigger TrainingList to refetch
     setRefreshKey(prev => prev + 1);
@@ -34,6 +39,7 @@ const TrainingPage: React.FC = () => {
 
   const handleFormCancel = useCallback(() => {
     setEditingId(null);
+    setEditingTraining(null);
     setActiveTab('list');
   }, []);
 
@@ -76,6 +82,7 @@ const TrainingPage: React.FC = () => {
             children: (
               <TrainingForm
                 trainingId={editingId}
+                initialTraining={editingTraining}
                 onSuccess={handleFormSuccess}
                 onCancel={handleFormCancel}
               />
@@ -101,7 +108,7 @@ const TrainingPage: React.FC = () => {
       >
         {viewingTraining && (
           <div>
-            <p><strong>Type:</strong> {viewingTraining.training_type}</p>
+            <p><strong>Type:</strong> {getTrainingTypeMeta(viewingTraining.training_type).label}</p>
             <p><strong>Date:</strong> {viewingTraining.training_date}</p>
             <p><strong>Trainer:</strong> {viewingTraining.trainer}</p>
             <p><strong>Location:</strong> {viewingTraining.location}</p>

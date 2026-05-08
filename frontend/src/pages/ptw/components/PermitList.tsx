@@ -12,9 +12,10 @@ const { Option } = Select;
 interface PermitListProps {
   onViewPermit?: (permit: Types.Permit) => void;
   onEditPermit?: (permit: Types.Permit) => void;
+  refreshKey?: number;
 }
 
-const PermitList: React.FC<PermitListProps> = ({ onViewPermit, onEditPermit }) => {
+const PermitList: React.FC<PermitListProps> = ({ onViewPermit, onEditPermit, refreshKey }) => {
   const {message} = App.useApp();
   const [permits, setPermits] = useState<Types.Permit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,8 +94,13 @@ const PermitList: React.FC<PermitListProps> = ({ onViewPermit, onEditPermit }) =
   };
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchText, statusFilter, dateRange]);
+    // Reset to page 1 when filters change; fetchPermits fires via the page/pageSize effect
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      fetchPermits();
+    }
+  }, [searchText, statusFilter, dateRange, refreshKey]);
 
   useEffect(() => {
     fetchPermits();

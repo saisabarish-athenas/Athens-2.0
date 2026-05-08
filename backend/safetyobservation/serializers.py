@@ -61,11 +61,26 @@ class SafetyObservationSerializer(serializers.ModelSerializer):
         return obj.attachments.count()
 
     def get_can_edit(self, obj):
-        return obj.observationStatus == 'draft'
+        return obj.observationStatus != 'closed'
+
+    def _normalize_classification(self, validated_data):
+        if 'classification' not in validated_data:
+            return
+
+        classification = validated_data['classification']
+        if isinstance(classification, str):
+            try:
+                import json
+                validated_data['classification'] = json.loads(classification)
+            except (json.JSONDecodeError, TypeError):
+                validated_data['classification'] = [classification] if classification else []
+        elif not isinstance(classification, list):
+            validated_data['classification'] = [classification] if classification else []
 
     def create(self, validated_data):
         # Extract file data
         before_pictures = validated_data.pop('beforePictures', [])
+        self._normalize_classification(validated_data)
 
         # Create the safety observation
         safety_observation = SafetyObservation.objects.create(**validated_data)
@@ -92,20 +107,7 @@ class SafetyObservationSerializer(serializers.ModelSerializer):
         # Remove observationID from validated_data as it should not be updated
         validated_data.pop('observationID', None)
 
-        # Handle classification field properly
-        if 'classification' in validated_data:
-            classification = validated_data['classification']
-            if isinstance(classification, str):
-                try:
-                    # Try to parse JSON string
-                    import json
-                    validated_data['classification'] = json.loads(classification)
-                except (json.JSONDecodeError, TypeError):
-                    # If not valid JSON, treat as single item
-                    validated_data['classification'] = [classification] if classification else []
-            elif not isinstance(classification, list):
-                # Ensure it's a list
-                validated_data['classification'] = [classification] if classification else []
+        self._normalize_classification(validated_data)
 
         # Update only the provided fields (partial update support)
         for attr, value in validated_data.items():

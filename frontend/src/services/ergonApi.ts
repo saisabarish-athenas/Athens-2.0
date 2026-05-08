@@ -14,9 +14,11 @@ export const ergonApi = {
   getSLAHistory: (id: string) => apiClient.get(`/api/ergon/daily-planner/${id}/sla_history/`),
 
   // Tasks
-  getTasks: () => apiClient.get('/api/ergon/tasks/'),
+  getTasks: (params?: any) => apiClient.get('/api/ergon/tasks/', { params }),
   createTask: (data: any) => apiClient.post('/api/ergon/tasks/', data),
-  updateTask: (id: string, data: any) => apiClient.put(`/api/ergon/tasks/${id}/`, data),
+  updateTask: (id: string | number, data: any) => apiClient.put(`/api/ergon/tasks/${id}/`, data),
+  patchTask: (id: string | number, data: any) => apiClient.patch(`/api/ergon/tasks/${id}/`, data),
+  deleteTask: (id: string | number) => apiClient.delete(`/api/ergon/tasks/${id}/`),
   updateProgress: (id: string, data: any) => apiClient.post(`/api/ergon/tasks/${id}/update_progress/`, data),
   getTaskHistory: (id: string) => apiClient.get(`/api/ergon/tasks/${id}/history/`),
 

@@ -364,3 +364,70 @@ def my_permissions(request):
     return Response({'tenant_id': str(tenant.id) if tenant else None, 'user_type': user.user_type,
                      'admin_type': user.admin_type, 'roles': role_map.get(user.user_type, []),
                      'permissions': permission_map.get(user.user_type, [])})
+
+
+# ─── MOM / Notification endpoints ────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_notifications(request):
+    """Return notifications for the logged-in user, newest first."""
+    from .models_notification import Notification
+    limit = int(request.query_params.get('limit', 50))
+    notifs = (
+        Notification.objects
+        .for_user(request.user.id)
+        .order_by('-created_at')[:limit]
+    )
+    data = [n.to_dict() for n in notifs]
+    unread = Notification.objects.for_user(request.user.id).filter(read=False).count()
+    return Response({'results': data, 'unread_count': unread})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_notification(request):
+    """Create a notification for a target user (used by frontend sendNotification)."""
+    from .models_notification import Notification
+    target_user_id = request.data.get('user_id') or request.data.get('userId')
+    if not target_user_id:
+        return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    allowed_types = {t[0] for t in Notification.NOTIFICATION_TYPES}
+    notif_type = request.data.get('type', 'general')
+    if notif_type not in allowed_types:
+        notif_type = 'general'
+
+    notif = Notification.objects.create(
+        user_id=target_user_id,
+        title=request.data.get('title', 'Notification'),
+        message=request.data.get('message', ''),
+        notification_type=notif_type,
+        data=request.data.get('data') or {},
+        link=request.data.get('link') or '',
+        sender=request.user,
+    )
+    return Response(notif.to_dict(), status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notifications_read(request):
+    """Mark a list of notification IDs as read for the current user."""
+    from .models_notification import Notification
+    ids = request.data.get('notification_ids', [])
+    if ids:
+        Notification.objects.filter(user=request.user, id__in=ids).update(
+            read=True,
+            read_at=timezone.now(),
+        )
+    return Response({'status': 'ok'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notification_stats(request):
+    """Return unread notification count for the current user."""
+    from .models_notification import Notification
+    unread = Notification.objects.for_user(request.user.id).filter(read=False).count()
+    return Response({'unread_count': unread})

@@ -84,8 +84,13 @@ class IsServiceAdmin(permissions.BasePermission):
         if request.user.user_type == UserType.MASTERADMIN:
             return True
         
-        if request.user.user_type == UserType.COMPANYUSER and request.user.admin_type:
-            return True
+        if request.user.user_type == UserType.COMPANYUSER:
+            # Allow any companyuser with an admin_type (client/epc/contractor)
+            if request.user.admin_type:
+                return True
+            # Also allow role_type='admin' (project admins created via admin creation flow)
+            if getattr(request.user, 'role_type', None) == 'admin':
+                return True
         
         self.message = {"error": "Only Owner/Admin can manage services"}
         return False

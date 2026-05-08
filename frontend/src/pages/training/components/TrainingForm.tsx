@@ -1,34 +1,63 @@
-import React, { useState } from 'react';
-import { Form, Input, Select, DatePicker, Button, Card, Row, Col, Radio, Space, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Form, Input, Select, DatePicker, Button, Card, Row, Col, Space, message } from 'antd';
 import { apiClient } from '../../../lib/api';
+import dayjs from 'dayjs';
+import { DEFAULT_TRAINING_TYPE, TRAINING_TYPES } from '../trainingTypes';
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 interface TrainingFormProps {
   trainingId?: number | null;
+  initialTraining?: any | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-const TrainingForm: React.FC<TrainingFormProps> = ({ trainingId, onSuccess, onCancel }) => {
+const TrainingForm: React.FC<TrainingFormProps> = ({ trainingId, initialTraining, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [trainingType, setTrainingType] = useState('induction');
+  const [trainingType, setTrainingType] = useState<string>(DEFAULT_TRAINING_TYPE);
+
+  useEffect(() => {
+    if (!initialTraining) {
+      form.resetFields();
+      setTrainingType(DEFAULT_TRAINING_TYPE);
+      return;
+    }
+
+    const selectedType = initialTraining.trainingType || initialTraining.training_type || DEFAULT_TRAINING_TYPE;
+    setTrainingType(selectedType);
+    form.setFieldsValue({
+      training_type: selectedType,
+      title: initialTraining.title,
+      training_date: initialTraining.training_date ? dayjs(initialTraining.training_date) : null,
+      trainer: initialTraining.trainer || initialTraining.conducted_by,
+      location: initialTraining.location,
+      description: initialTraining.description,
+      job_role: initialTraining.job_role,
+    });
+    console.log('[TrainingForm] edit loaded training type:', selectedType, initialTraining);
+  }, [form, initialTraining]);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      const selectedTrainingType = values.training_type;
       const payload = {
-        ...values,
-        training_date: values.training_date?.format('YYYY-MM-DD'),
+        trainingType: selectedTrainingType,
         // Map frontend fields to TBT API fields
         title: values.title,
         conducted_by: values.trainer,
         location: values.location,
         date: values.training_date?.format('YYYY-MM-DD'),
+        description: values.description || '',
+        job_role: values.job_role,
         // status is not included - backend will apply default='planned'
       };
+      console.log('[TrainingForm] selected training type:', selectedTrainingType);
+      console.log('[TrainingForm] submitted payload:', payload);
+      console.log('[TrainingForm] API request body:', JSON.stringify(payload));
       if (trainingId) {
         await apiClient.patch(`/api/tbt/update/${trainingId}/`, payload);
         message.success('Training updated successfully');
@@ -55,7 +84,7 @@ const TrainingForm: React.FC<TrainingFormProps> = ({ trainingId, onSuccess, onCa
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{ training_type: 'induction' }}
+        initialValues={{ training_type: DEFAULT_TRAINING_TYPE }}
       >
         <Row gutter={16}>
           <Col xs={24} md={12}>
@@ -64,10 +93,17 @@ const TrainingForm: React.FC<TrainingFormProps> = ({ trainingId, onSuccess, onCa
               label="Training Type"
               rules={[{ required: true, message: 'Please select training type' }]}
             >
-              <Radio.Group onChange={(e) => setTrainingType(e.target.value)}>
-                <Radio.Button value="induction">Induction Training</Radio.Button>
-                <Radio.Button value="job">Job Training</Radio.Button>
-              </Radio.Group>
+              <Select
+                placeholder="Select training type"
+                onChange={(value) => {
+                  setTrainingType(value);
+                  console.log('[TrainingForm] selected dropdown value:', value);
+                }}
+              >
+                {TRAINING_TYPES.map(type => (
+                  <Option key={type.value} value={type.value}>{type.label}</Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>
@@ -114,7 +150,7 @@ const TrainingForm: React.FC<TrainingFormProps> = ({ trainingId, onSuccess, onCa
           </Col>
         </Row>
 
-        {trainingType === 'job' && (
+        {trainingType === 'job_training' && (
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item

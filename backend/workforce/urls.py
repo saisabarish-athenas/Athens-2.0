@@ -32,6 +32,9 @@ router.register(r'leave-requests', LeaveRequestViewSet, basename='workforce-leav
 # CONTRACTOR MANAGEMENT
 router.register(r'contractors', ContractorMasterViewSet, basename='workforce-contractor')
 
+# USER SELF-SERVICE ATTENDANCE
+router.register(r'user-attendance', UserAttendanceViewSet, basename='workforce-user-attendance')
+
 urlpatterns = [
     path('', include(router.urls)),
     path('contractoruser-list/', contractoruser_list, name='contractoruser-list'),

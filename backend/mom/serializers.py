@@ -17,10 +17,12 @@ class ParticipantAttendanceSerializer(serializers.ModelSerializer):
 class MomLiveSerializer(serializers.ModelSerializer):
     participants = serializers.SerializerMethodField()
     points_to_discuss = serializers.CharField(allow_blank=True, allow_null=True)
+    scheduled_by_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Mom
-        fields = ['id', 'title', 'agenda', 'meeting_datetime', 'points_to_discuss', 'participants', 'status', 'completed_at', 'duration_minutes']
+        fields = ['id', 'title', 'agenda', 'meeting_datetime', 'points_to_discuss',
+                  'participants', 'status', 'completed_at', 'duration_minutes', 'scheduled_by_id']
 
     def get_participants(self, obj):
         # Get all participants with their status and attendance
@@ -67,10 +69,15 @@ class MomSerializer(serializers.ModelSerializer):
     scheduled_by = UserSerializer(read_only=True)
     participants = UserSerializer(many=True, read_only=True)
     participants_ids = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=CustomUser.objects.all(), write_only=True, source='participants'
+        many=True,
+        queryset=CustomUser.objects.filter(is_active=True),
+        write_only=True,
+        source='participants',
+        required=False,   # allow creating a meeting without participants
     )
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
+    participants_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Mom
@@ -82,6 +89,7 @@ class MomSerializer(serializers.ModelSerializer):
             'scheduled_by',
             'participants',
             'participants_ids',
+            'participants_count',
             'department',
             'location',
             'created_at',
@@ -94,31 +102,30 @@ class MomSerializer(serializers.ModelSerializer):
         ]
     
     def get_can_edit(self, obj):
-        """Check if current user can edit this MOM"""
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        # Only creator can edit
         return obj.scheduled_by == request.user
-    
+
     def get_can_delete(self, obj):
-        """Check if current user can delete this MOM"""
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        # Only creator can delete
         return obj.scheduled_by == request.user
+
+    def get_participants_count(self, obj):
+        return obj.participants.count()
     
     def validate_meeting_datetime(self, value):
         """Validate meeting datetime - allow past dates in edit mode"""
-        # Check if this is an update operation (instance exists)
         if self.instance:
-            # In edit mode, allow any datetime without future validation
             return value
-        
-        # For new meetings, require future datetime
         from django.utils import timezone
-        if value <= timezone.now():
+        # Make value timezone-aware if it's naive (frontend may send local time without tz)
+        if timezone.is_naive(value):
+            value = timezone.make_aware(value)
+        # Allow 2-minute grace period for clock skew between client and server
+        if value <= timezone.now() - timezone.timedelta(minutes=2):
             raise serializers.ValidationError("Meeting datetime must be in the future for new meetings.")
         return value
 
@@ -136,9 +143,10 @@ class MomSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         
-        # Update participants if provided
+        # Update participants if provided — always keep creator in the list
         if participants is not None:
             instance.participants.set(participants)
+            instance.participants.add(instance.scheduled_by)
         
         return instance
 

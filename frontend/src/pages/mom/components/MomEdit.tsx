@@ -90,7 +90,7 @@ const MomEdit: React.FC = () => {
 
         if (!momData.can_edit) {
           messageRef.current.error('You do not have permission to edit this meeting.');
-          navigate('/dashboard/mom');
+          navigate('/app/mom');
           return;
         }
 
@@ -257,7 +257,7 @@ const MomEdit: React.FC = () => {
       };
       await apiClient.put(`/api/v1/mom/${id}/`, payload);
       messageRef.current.success('Meeting updated successfully!');
-      navigate('/dashboard/mom');
+      navigate('/app/mom');
     } catch (error: any) {
       const errors = error?.response?.data;
       let errorMsg = 'Failed to update meeting.';
@@ -278,7 +278,7 @@ const MomEdit: React.FC = () => {
         title="Edit Meeting"
         subtitle="Modify meeting details"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Edit Meeting' }
         ]}
       >
@@ -295,7 +295,7 @@ const MomEdit: React.FC = () => {
         title="Edit Meeting"
         subtitle="Access denied"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'Edit Meeting' }
         ]}
       >
@@ -312,7 +312,7 @@ const MomEdit: React.FC = () => {
       title="Edit Meeting"
       subtitle="Modify meeting details and participants"
       breadcrumbs={[
-        { title: 'MOM', href: '/dashboard/mom' },
+        { title: 'MOM', href: '/app/mom' },
         { title: 'Edit Meeting' }
       ]}
     >

@@ -39,7 +39,7 @@ interface MomFormValues {
 }
 
 interface MomCreationFormProps {
-  onFinishSuccess?: () => void;
+  onFinishSuccess?: (newMeeting?: any) => void;
   onCancel?: () => void;
 }
 
@@ -69,8 +69,10 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
   const canScheduleMom = Boolean(
     user && (
       schedulerUserType === 'adminuser' ||
-      (schedulerUserType === 'companyuser' && ['client', 'epc', 'clientuser', 'epcuser', 'contractor'].includes(schedulerAdminType || '')) ||
-      ['client', 'epc', 'clientuser', 'epcuser', 'contractor'].includes(schedulerAdminType || '')
+      (schedulerUserType === 'companyuser' && (
+        ['client', 'epc', 'clientuser', 'epcuser', 'contractor'].includes(schedulerAdminType || '') ||
+        (user as any)?.role_type === 'user'
+      ))
     )
   );
 
@@ -213,13 +215,20 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
     
     setSubmitting(true);
     try {
+      // Build clean payload — exclude UI-only fields (departments is a local filter, not a backend field)
       const payload = {
-        ...values,
-        meeting_datetime: values.meeting_datetime ? values.meeting_datetime.toISOString() : null,
-        scheduled_by: schedulerUserId, // Assuming backend expects scheduler's ID
+        title: values.title,
+        agenda: values.agenda,
+        location: values.location,
+        participants_ids: values.participants_ids,
+        // Send as local ISO string so backend timezone comparison is accurate
+        meeting_datetime: values.meeting_datetime
+          ? values.meeting_datetime.format('YYYY-MM-DDTHH:mm:ss')
+          : null,
       };
-      // Replace with your actual endpoint for creating MoM
-      const response = await api.post('/api/v1/mom/schedule/', payload); // Example endpoint
+      console.log('MOM create payload:', payload);
+      const response = await api.post('/api/v1/mom/schedule/', payload);
+      console.log('MOM CREATED:', response.data);
       safeLog.info('MOM created successfully', {
         momId: response.data.id,
         title: response.data.title,
@@ -316,7 +325,7 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
       setSelectedDateTime(null);
       setNotificationsSent(new Set());
       if (onFinishSuccess) {
-        onFinishSuccess();
+        onFinishSuccess(response.data);
       }
     } catch (error: any) {
       safeLog.error("MoM Creation error", {
@@ -325,21 +334,19 @@ const MomCreationForm: React.FC<MomCreationFormProps> = ({ onFinishSuccess }) =>
         data: error.response?.data,
         submissionId: currentSubmissionId
       });
-      if (error.response && error.response.data) {
-        // Handle specific backend validation errors if available
-        let errorMsg = 'Failed to schedule meeting.';
-        const errors = error.response.data;
-        if (typeof errors === 'object' && errors !== null) {
-            Object.keys(errors).forEach(key => {
-                errorMsg += ` ${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`;
-            });
-        } else if (typeof errors === 'string') {
-            errorMsg = errors;
-        }
-        message.error(errorMsg);
-      } else {
-        message.error('Failed to schedule meeting. An unexpected error occurred.');
+      console.error('MOM create failed:', error.response?.status, JSON.stringify(error.response?.data));
+      const errors = error.response?.data;
+      let errorMsg = 'Failed to schedule meeting.';
+      if (errors && typeof errors === 'object') {
+        // Surface DRF field-level errors (e.g. participants_ids, meeting_datetime)
+        const fieldErrors = Object.entries(errors)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+          .join(' | ');
+        if (fieldErrors) errorMsg = fieldErrors;
+      } else if (typeof errors === 'string') {
+        errorMsg = errors;
       }
+      message.error(errorMsg);
     } finally {
       setSubmitting(false);
     }

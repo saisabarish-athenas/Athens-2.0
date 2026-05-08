@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, Typography, Row, Col, Progress, Tag, Statistic } from 'antd';
 import { 
   CheckCircleOutlined, 
-  CloseCircleOutlined, 
   ClockCircleOutlined,
   UserOutlined,
   TeamOutlined
@@ -14,7 +13,7 @@ interface Participant {
   id: number;
   name: string;
   email: string;
-  status: 'accepted' | 'rejected' | 'pending' | 'noresponse' | string;
+  status: 'accepted' | 'pending' | 'noresponse' | string;
   attended: boolean;
 }
 
@@ -34,24 +33,17 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
   // Memoized participant statistics calculation to avoid repeated calculations
   const participantStats = React.useMemo(() => {
     const acceptedCount = participants.filter(p => p.status === 'accepted').length;
-    const rejectedCount = participants.filter(p => p.status === 'rejected').length;
-    const noResponseCount = participants.filter(p => p.status === 'pending' || p.status === 'noresponse').length;
+    const noResponseCount = participants.filter(p => p.status !== 'accepted').length;
     const totalParticipants = participants.length;
     
     return {
       acceptedCount,
-      rejectedCount,
       noResponseCount,
       totalParticipants
     };
   }, [participants]);
   
-  const { acceptedCount, rejectedCount, noResponseCount, totalParticipants } = participantStats;
-  
-  // Calculate response rate
-  const responseRate = totalParticipants > 0 
-    ? Math.round(((acceptedCount + rejectedCount) / totalParticipants) * 100)
-    : 0;
+  const { acceptedCount, noResponseCount, totalParticipants } = participantStats;
   
   // Calculate acceptance rate
   const acceptanceRate = totalParticipants > 0 
@@ -71,7 +63,6 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'accepted': return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
-      case 'rejected': return <CloseCircleOutlined style={{ color: '#ff4d4f' }} />;
       case 'pending':
       case 'noresponse': return <ClockCircleOutlined style={{ color: '#faad14' }} />;
       default: return <UserOutlined />;
@@ -104,24 +95,12 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
         {/* Response Statistics */}
         <Col xs={24} md={12}>
           <Title level={5}>Response Statistics</Title>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Statistic
-                title="Response Rate"
-                value={responseRate}
-                suffix="%"
-                valueStyle={{ color: responseRate >= 70 ? '#3f8600' : responseRate >= 50 ? '#faad14' : '#cf1322' }}
-              />
-            </Col>
-            <Col span={12}>
-              <Statistic
-                title="Acceptance Rate"
-                value={acceptanceRate}
-                suffix="%"
-                valueStyle={{ color: acceptanceRate >= 70 ? '#3f8600' : acceptanceRate >= 50 ? '#faad14' : '#cf1322' }}
-              />
-            </Col>
-          </Row>
+          <Statistic
+            title="Acceptance Rate"
+            value={acceptanceRate}
+            suffix="%"
+            styles={{ content: { color: acceptanceRate >= 70 ? '#3f8600' : acceptanceRate >= 50 ? '#faad14' : '#cf1322' } }}
+          />
         </Col>
 
         {/* Participant Breakdown */}
@@ -135,17 +114,6 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
                   <Text strong style={{ color: '#52c41a' }}>{acceptedCount}</Text>
                   <br />
                   <Text type="secondary" style={{ fontSize: '12px' }}>Accepted</Text>
-                </div>
-              </Card>
-            </Col>
-            
-            <Col xs={12} sm={6}>
-              <Card size="small" style={{ textAlign: 'center', backgroundColor: '#fff2f0' }}>
-                <CloseCircleOutlined style={{ fontSize: '24px', color: '#ff4d4f', marginBottom: 8 }} />
-                <div>
-                  <Text strong style={{ color: '#ff4d4f' }}>{rejectedCount}</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Rejected</Text>
                 </div>
               </Card>
             </Col>
@@ -178,16 +146,15 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
         <Col xs={24}>
           <Title level={5}>Response Progress</Title>
           <Progress
-            percent={responseRate}
+            percent={acceptanceRate}
             strokeColor={{
-              '0%': '#ff4d4f',
-              '50%': '#faad14',
+              '0%': '#faad14',
               '100%': '#52c41a',
             }}
-            format={(percent) => `${percent}% responded`}
+            format={(percent) => `${percent}% accepted`}
           />
           <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-            {acceptedCount} accepted • {rejectedCount} rejected • {noResponseCount} no response
+            {acceptedCount} accepted • {noResponseCount} no response
           </div>
         </Col>
 
@@ -198,8 +165,8 @@ const MomWorkflowSummary: React.FC<MomWorkflowSummaryProps> = ({
             <Tag color="blue" icon={<UserOutlined />}>
               Invitations Sent: {totalParticipants}
             </Tag>
-            <Tag color={responseRate >= 70 ? 'green' : 'orange'} icon={<CheckCircleOutlined />}>
-              Response Rate: {responseRate}%
+            <Tag color={acceptanceRate >= 70 ? 'green' : 'orange'} icon={<CheckCircleOutlined />}>
+              Acceptance Rate: {acceptanceRate}%
             </Tag>
             {meetingStatus === 'live' && (
               <Tag color="green" icon={<CheckCircleOutlined />}>

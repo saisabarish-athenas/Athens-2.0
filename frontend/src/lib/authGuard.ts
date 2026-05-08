@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/authStore';
+import tokenManager from './tokenManager';
 
 /**
  * Authentication guard utility to prevent API calls when user is not authenticated
@@ -8,16 +9,19 @@ export const authGuard = {
    * Check if user is authenticated and authorized to make API calls
    */
   canMakeApiCall(): boolean {
-    const { token, isAuthenticated } = useAuthStore.getState();
-    return !!(token && isAuthenticated());
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const token = tokenManager.getAccessToken();
+    // isAuthenticated is a boolean in the store, not a function
+    return !!(token && isAuthenticated && user);
   },
 
   /**
    * Check if user is authenticated and approved for full access
    */
   canAccessProtectedFeatures(): boolean {
-    const { token, isAuthenticated, isApproved, hasSubmittedDetails } = useAuthStore.getState();
-    return !!(token && isAuthenticated() && isApproved && hasSubmittedDetails);
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const token = tokenManager.getAccessToken();
+    return !!(token && isAuthenticated && user);
   },
 
   /**

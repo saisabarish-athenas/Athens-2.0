@@ -189,9 +189,34 @@ class TaskViewSet(viewsets.ModelViewSet):
         tenant, error = get_current_tenant(self.request.user)
         if error:
             return Task.objects.none()
-        return Task.objects.filter(athens_tenant_id=tenant.id).select_related(
+        qs = Task.objects.filter(athens_tenant_id=tenant.id).select_related(
             'assigned_by', 'assigned_to', 'project', 'department'
         )
+        params = self.request.query_params
+        search = params.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(assigned_to__email__icontains=search) |
+                Q(assigned_to__name__icontains=search) |
+                Q(project__name__icontains=search)
+            )
+        status_filter = params.get('status', '').strip()
+        if status_filter and status_filter != 'all':
+            if status_filter == 'overdue':
+                from django.utils import timezone as tz
+                qs = qs.filter(due_date__lt=tz.now().date()).exclude(status='completed')
+            else:
+                qs = qs.filter(status=status_filter)
+        priority_filter = params.get('priority', '').strip()
+        if priority_filter and priority_filter != 'all':
+            qs = qs.filter(priority=priority_filter)
+        project_filter = params.get('project_id', '').strip()
+        if project_filter:
+            qs = qs.filter(project_id=project_filter)
+        return qs
     
     def perform_create(self, serializer):
         tenant, _ = get_current_tenant(self.request.user)
@@ -200,23 +225,33 @@ class TaskViewSet(viewsets.ModelViewSet):
                 athens_tenant_id=tenant.id,
                 assigned_by=self.request.user
             )
-            # Create history
             TaskHistory.objects.create(
                 task=task,
                 user=self.request.user,
                 action='created',
                 new_value=f'Task created: {task.title}'
             )
-            # Sync with daily planner if planned_date exists
-            if task.planned_date:
+            if task.planned_date and task.assigned_to:
                 DailyTask.objects.create(
                     athens_tenant_id=tenant.id,
                     task=task,
                     user=task.assigned_to,
-                    planned_date=task.planned_date,
-                    status=task.status,
-                    progress=task.progress
+                    title=task.title,
+                    description=task.description,
+                    scheduled_date=task.planned_date,
+                    priority=task.priority,
+                    status='not_started'
                 )
+    
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            task = serializer.save()
+            TaskHistory.objects.create(
+                task=task,
+                user=self.request.user,
+                action='updated',
+                new_value=f'Task updated: {task.title}'
+            )
     
     @action(detail=True, methods=['post'])
     def update_progress(self, request, pk=None):

@@ -51,9 +51,11 @@ LIKELIHOOD_CHOICES = [
 ]
 
 STATUS_CHOICES = [
-    ('draft', 'Draft'),
-    ('submitted', 'Submitted'),
+    ('open', 'Open'),
+    ('in_progress', 'In Progress'),
+    ('pending_verification', 'Pending Verification'),
     ('closed', 'Closed'),
+    ('rejected', 'Rejected'),
 ]
 
 class SafetyObservation(models.Model):
@@ -83,7 +85,7 @@ class SafetyObservation(models.Model):
     commitmentDate = models.DateField(null=True, blank=True)
 
     # Status and Additional Info
-    observationStatus = models.CharField(max_length=50, choices=STATUS_CHOICES, default='draft')
+    observationStatus = models.CharField(max_length=50, choices=STATUS_CHOICES, default='open')
     submitted_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='closed_safety_observations')

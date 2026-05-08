@@ -102,6 +102,9 @@ class Attendance(models.Model):
     STATUS_CHOICES = [('P', 'Present'), ('A', 'Absent'), ('L', 'Leave'), ('H', 'Holiday'), ('WO', 'Weekly Off')]
     athens_tenant_id = models.IntegerField(db_index=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_attendance_records')
+    project_id = models.IntegerField(null=True, blank=True, db_index=True)
+    organization_id = models.IntegerField(null=True, blank=True, db_index=True)
     date = models.DateField()
     shift = models.ForeignKey(ShiftSchedule, on_delete=models.SET_NULL, null=True, blank=True)
     in_time = models.TimeField(null=True, blank=True)
@@ -109,11 +112,44 @@ class Attendance(models.Model):
     total_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='P')
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         db_table = 'workforce_attendance'
         unique_together = ['employee', 'date']
         indexes = [models.Index(fields=['athens_tenant_id', 'date'])]
+
+
+class UserAttendance(models.Model):
+    """
+    Self-service attendance for Users (role_type='user' or any companyuser).
+    Linked directly to User — no Employee record required.
+    Single source of truth for user-side check-in/check-out.
+    """
+    STATUS_CHOICES = [
+        ('present',  'Present'),
+        ('late',     'Late'),
+        ('half_day', 'Half Day'),
+        ('absent',   'Absent'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_attendances')
+    date = models.DateField(db_index=True)
+    check_in_time  = models.TimeField(null=True, blank=True)
+    check_out_time = models.TimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='present')
+    latitude  = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'workforce_user_attendance'
+        unique_together = ['user', 'date']
+        indexes = [models.Index(fields=['user', 'date'])]
+
+    def __str__(self):
+        return f"{self.user_id} {self.date} {self.status}"
 
 # MODULE 3: PAYROLL & WAGE MANAGEMENT
 
@@ -132,6 +168,7 @@ class PayrollCycle(models.Model):
 
 class PayrollEntry(models.Model):
     PAYMENT_MODE_CHOICES = [('cash', 'Cash'), ('bank', 'Bank Transfer'), ('cheque', 'Cheque')]
+    PAYMENT_STATUS_CHOICES = [('pending', 'Pending'), ('processed', 'Processed'), ('paid', 'Paid')]
     athens_tenant_id = models.IntegerField(db_index=True)
     payroll_cycle = models.ForeignKey(PayrollCycle, on_delete=models.CASCADE)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
@@ -156,7 +193,9 @@ class PayrollEntry(models.Model):
     total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
     net_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     payment_date = models.DateField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
     payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, blank=True)
     transaction_reference = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -249,17 +288,40 @@ class LeaveBalance(models.Model):
         unique_together = ['employee', 'leave_type', 'year']
 
 class LeaveRequest(models.Model):
-    athens_tenant_id = models.IntegerField(db_index=True)
-    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_requests')
-    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    days_count = models.IntegerField()
-    reason = models.TextField()
-    status = models.CharField(max_length=50, default='pending')
-    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
-    approved_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    STATUS_PENDING  = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('approved',  'Approved'),
+        ('rejected',  'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    athens_tenant_id  = models.IntegerField(db_index=True)
+    employee          = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type        = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    start_date        = models.DateField()
+    end_date          = models.DateField()
+    days_count        = models.IntegerField()
+    reason            = models.TextField()
+    status            = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    # Hierarchy fields
+    requester_role    = models.CharField(max_length=30, blank=True, default='')
+    assigned_approver = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='leave_approvals_assigned'
+    )
+    approved_by       = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_leaves'
+    )
+    approved_at       = models.DateTimeField(null=True, blank=True)
+    rejection_reason  = models.TextField(blank=True, default='')
+    created_at        = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         db_table = 'workforce_leave_request'
         indexes = [models.Index(fields=['athens_tenant_id', 'status'])]

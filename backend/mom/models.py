@@ -67,3 +67,44 @@ class ParticipantAttendance(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.mom} - Attended: {self.attended}"
+
+
+class MeetingQRToken(models.Model):
+    """Secure QR token for a live meeting — one active token per meeting."""
+    mom = models.OneToOneField(Mom, on_delete=models.CASCADE, related_name='qr_token')
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        from django.utils import timezone
+        return timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f"QR token for meeting {self.mom_id}"
+
+
+class MeetingAttendanceLog(models.Model):
+    """Detailed attendance log — one row per participant per meeting."""
+    MARKED_VIA_QR = 'qr'
+    MARKED_VIA_CODE = 'code'
+    MARKED_VIA_HOST = 'host'
+    MARKED_VIA_CHOICES = [
+        (MARKED_VIA_QR, 'QR Scan'),
+        (MARKED_VIA_CODE, 'Employee Code'),
+        (MARKED_VIA_HOST, 'Host'),
+    ]
+
+    mom = models.ForeignKey(Mom, on_delete=models.CASCADE, related_name='attendance_logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='mom_attendance_logs')
+    marked_via = models.CharField(max_length=10, choices=MARKED_VIA_CHOICES, default=MARKED_VIA_HOST)
+    attendance_time = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    device_info = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('mom', 'user')
+
+    def __str__(self):
+        return f"{self.user} attended {self.mom} via {self.marked_via}"

@@ -8,6 +8,7 @@ from authentication.company_settings import (
 
 urlpatterns = [
     path('api/auth/', include('authentication.urls')),
+    path('api/notifications/', include('authentication.notification_urls')),
     path('api/control-plane/', include('control_plane.urls')),
     path('api/system/', include('system.urls')),
     path('api/projects/', include('projects.urls')),
@@ -17,6 +18,7 @@ urlpatterns = [
     path('api/ergon/manpower/', include('ergon_manpower.urls')),
     path('api/v1/quality/', include('quality.urls')),
     path('api/quality/', include('quality.urls')),
+    path('api/v1/safetyobservation/', include('safetyobservation.urls')),
     path('api/safety-observation/', include('safetyobservation.urls')),
     path('api/induction-training/', include('inductiontraining.urls')),
     path('api/job-training/', include('jobtraining.urls')),

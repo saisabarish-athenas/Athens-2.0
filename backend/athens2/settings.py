@@ -28,7 +28,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-=s98cb05e1ab3sj#_#*w8siv6@=%@^55(iq_jyy-8=&du8ygt7')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
@@ -202,11 +202,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://ai-athens.cloud",
 ]
 
-# Allow all origins in development
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-
-# Allow credentials for authentication
-CORS_ALLOW_CREDENTIALS = True
+# In development: allow all origins but NOT with credentials (browser blocks this combination)
+# In production: use explicit CORS_ALLOWED_ORIGINS list with credentials
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = False   # Cannot combine ALLOW_ALL_ORIGINS=True with credentials=True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOW_CREDENTIALS = True    # Safe with explicit origins list above
 
 # Allow common headers
 CORS_ALLOW_HEADERS = [

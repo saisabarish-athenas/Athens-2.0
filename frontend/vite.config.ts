@@ -33,5 +33,21 @@ export default defineConfig({
     headers: {
       'Cache-Control': 'no-cache',
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8004',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ws': {
+        target: 'ws://localhost:8004',
+        ws: true,
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://localhost:8004',
+        changeOrigin: true,
+      },
+    },
   },
 })

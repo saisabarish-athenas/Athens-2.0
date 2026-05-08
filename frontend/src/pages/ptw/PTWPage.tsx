@@ -10,6 +10,7 @@ const PTWPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingPermitId, setEditingPermitId] = useState<number | null>(null);
   const [viewingPermit, setViewingPermit] = useState<Types.Permit | null>(null);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
 
   const handleCreatePermit = useCallback(() => {
     setEditingPermitId(null);
@@ -27,6 +28,7 @@ const PTWPage: React.FC = () => {
 
   const handleFormSuccess = useCallback(() => {
     setEditingPermitId(null);
+    setListRefreshKey(k => k + 1);
     setActiveTab('list');
   }, []);
 
@@ -66,7 +68,7 @@ const PTWPage: React.FC = () => {
                 All Permits
               </span>
             ),
-            children: <PermitList onViewPermit={handleViewPermit} onEditPermit={handleEditPermit} />
+            children: <PermitList onViewPermit={handleViewPermit} onEditPermit={handleEditPermit} refreshKey={listRefreshKey} />
           },
           {
             key: 'form',

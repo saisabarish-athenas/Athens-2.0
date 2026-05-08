@@ -25,8 +25,33 @@ export const workforceApi = {
   checkOut: (id: number, data: { check_out_time: string; latitude: number; longitude: number }) =>
     apiClient.patch(`/api/workforce/attendance/${id}/checkout/`, data),
 
-  getInvoices: () => apiClient.get('/api/workforce/invoices/'),
+  // Payroll Cycles
+  getPayrollCycles: (params?: any) => apiClient.get('/api/workforce/payroll-cycles/', { params }),
+  createPayrollCycle: (data: any) => apiClient.post('/api/workforce/payroll-cycles/', data),
+  updatePayrollCycle: (id: number, data: any) => apiClient.patch(`/api/workforce/payroll-cycles/${id}/`, data),
+  deletePayrollCycle: (id: number) => apiClient.delete(`/api/workforce/payroll-cycles/${id}/`),
+  processPayrollCycle: (id: number) => apiClient.post(`/api/workforce/payroll-cycles/${id}/process/`),
+  lockPayrollCycle: (id: number) => apiClient.post(`/api/workforce/payroll-cycles/${id}/lock/`),
+  payAllEntries: (id: number, data?: any) => apiClient.post(`/api/workforce/payroll-cycles/${id}/pay-all/`, data),
+  getPayrollCycleEntries: (id: number, params?: any) => apiClient.get(`/api/workforce/payroll-cycles/${id}/entries/`, { params }),
+  getPayrollSummary: () => apiClient.get('/api/workforce/payroll-cycles/summary/'),
+  // Payroll Entries
+  getPayrollEntries: (params?: any) => apiClient.get('/api/workforce/payroll-entries/', { params }),
+  payEntry: (id: number, data?: any) => apiClient.post(`/api/workforce/payroll-entries/${id}/pay/`, data),
+  processSingleEntry: (id: number) => apiClient.post(`/api/workforce/payroll-entries/${id}/process_single/`),
   createInvoice: (data: any) => apiClient.post('/api/workforce/invoices/', data),
   getPayments: (invoiceId: string) => apiClient.get(`/api/workforce/invoices/${invoiceId}/payments/`),
   createPayment: (invoiceId: string, data: any) => apiClient.post(`/api/workforce/invoices/${invoiceId}/payments/`, data),
+  
+  // Leave Management
+  getLeaveTypes: () => apiClient.get('/api/workforce/leave-types/'),
+  createLeaveType: (data: any) => apiClient.post('/api/workforce/leave-types/', data),
+  getLeaveRequests: (params?: any) => apiClient.get('/api/workforce/leave-requests/', { params }),
+  getLeaveInbox: () => apiClient.get('/api/workforce/leave-requests/inbox/'),
+  getMyLeaveRequests: () => apiClient.get('/api/workforce/leave-requests/my_requests/'),
+  createLeaveRequest: (data: any) => apiClient.post('/api/workforce/leave-requests/', data),
+  updateLeaveRequest: (id: number, data: any) => apiClient.patch(`/api/workforce/leave-requests/${id}/`, data),
+  cancelLeaveRequest: (id: number) => apiClient.delete(`/api/workforce/leave-requests/${id}/`),
+  approveLeaveRequest: (id: number) => apiClient.post(`/api/workforce/leave-requests/${id}/approve/`),
+  rejectLeaveRequest: (id: number, rejection_reason?: string) => apiClient.post(`/api/workforce/leave-requests/${id}/reject/`, { rejection_reason }),
 }

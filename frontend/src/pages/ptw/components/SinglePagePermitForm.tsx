@@ -16,11 +16,18 @@ const { TabPane } = Tabs;
 
 type ChecklistItem = { key: string; label: string; required: boolean; default_checked: boolean };
 
-const SinglePagePermitForm: React.FC = () => {
+interface SinglePagePermitFormProps {
+  permitId?: number | null;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+const SinglePagePermitForm: React.FC<SinglePagePermitFormProps> = ({ permitId: propPermitId, onSuccess, onCancel }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = propPermitId != null ? String(propPermitId) : routeId;
   const isEditing = !!id;
   const { projectId } = useAuthStore();
 
@@ -211,15 +218,38 @@ const handlePermitTypeChange = async (value: number) => {
       let response;
       if (isEditing) {
         response = await updatePermit(parseInt(id!), submitData);
-        message.success('Permit updated');
+        message.success('Permit updated successfully');
       } else {
         response = await createPermit(submitData);
-        message.success('Permit created');
+        console.log('[PTW] Permit created:', response.data?.id, response.data?.permit_number);
+        message.success(`Permit ${response.data?.permit_number || ''} created successfully`);
       }
-      
-      setTimeout(() => navigate('/app/ptw'), 1000);
+
+      // Reset form state
+      form.resetFields();
+      setRiskData(null);
+      setRiskScore(0);
+      setRiskLevel('');
+      setChecklistItems([]);
+      setGpsCoordinates('');
+      setQrImage(null);
+      setVerifierType(null);
+      setVerifierUsers([]);
+      // Re-seed permit number for next creation
+      const newPermitNumber = `PTW-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      form.setFieldsValue({ permit_number: newPermitNumber, work_nature: 'day' });
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/app/ptw');
+      }
     } catch (error: any) {
-      message.error(error?.response?.data?.detail || 'Failed to save permit');
+      const errDetail = error?.response?.data?.detail
+        || (typeof error?.response?.data === 'object' ? JSON.stringify(error.response.data) : null)
+        || 'Failed to save permit';
+      console.error('[PTW] Save error:', error?.response?.data);
+      message.error(errDetail);
     } finally {
       setSubmitting(false);
     }
@@ -596,7 +626,7 @@ const handlePermitTypeChange = async (value: number) => {
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button onClick={() => navigate('/app/ptw')}>Cancel</Button>
+          <Button onClick={() => onCancel ? onCancel() : navigate('/app/ptw')}>Cancel</Button>
           <Button type="primary" htmlType="submit" loading={submitting} icon={<SaveOutlined />}>
             {isEditing ? 'Update' : 'Create'} Permit
           </Button>

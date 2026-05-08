@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, Select, Tag, Row, Col, Space } from 'antd';
 import { SearchOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons';
 import { apiClient } from '../../../lib/api';
+import { getTrainingTypeMeta, TRAINING_TYPES } from '../trainingTypes';
 
 const { Option } = Select;
 
@@ -25,11 +26,18 @@ const TrainingList: React.FC<TrainingListProps> = ({ onView, onEdit, refreshKey 
         // Map API fields to expected frontend fields
         const mappedData = Array.isArray(data) ? data.map((training: any) => ({
           ...training,
-          training_type: 'tbt', // ToolboxTalk type
+          training_type: training.training_type || training.trainingType || 'toolbox_training',
+          trainingType: training.trainingType || training.training_type || 'toolbox_training',
           trainer: training.conducted_by,
           training_date: training.date,
           attendees: training.attendance_records?.length || 0,
         })) : [];
+        console.log('[TrainingList] fetched training values:', mappedData.map((training: any) => ({
+          id: training.id,
+          training_type: training.training_type,
+          trainingType: training.trainingType,
+          title: training.title,
+        })));
         setTrainings(mappedData);
       })
       .catch(() => setTrainings([]))
@@ -51,11 +59,14 @@ const TrainingList: React.FC<TrainingListProps> = ({ onView, onEdit, refreshKey 
       title: 'Type',
       dataIndex: 'training_type',
       key: 'training_type',
-      render: (type: string) => (
-        <Tag color={type === 'induction' ? 'green' : 'purple'}>
-          {type === 'induction' ? 'Induction' : 'Job Training'}
+      render: (type: string) => {
+        const meta = getTrainingTypeMeta(type);
+        return (
+        <Tag color={meta.color}>
+          {meta.label}
         </Tag>
-      ),
+        );
+      },
     },
     {
       title: 'Title',
@@ -130,7 +141,7 @@ const TrainingList: React.FC<TrainingListProps> = ({ onView, onEdit, refreshKey 
       t.title?.toLowerCase().includes(searchText.toLowerCase()) ||
       t.conducted_by?.toLowerCase().includes(searchText.toLowerCase()) ||
       t.location?.toLowerCase().includes(searchText.toLowerCase());
-    const matchType = !typeFilter || t.training_type === typeFilter || t.status === typeFilter;
+    const matchType = !typeFilter || t.training_type === typeFilter;
     return matchSearch && matchType;
   });
 
@@ -155,8 +166,9 @@ const TrainingList: React.FC<TrainingListProps> = ({ onView, onEdit, refreshKey 
               value={typeFilter}
               onChange={(value) => setTypeFilter(value)}
             >
-              <Option value="induction">Induction</Option>
-              <Option value="job">Job Training</Option>
+              {TRAINING_TYPES.map(type => (
+                <Option key={type.value} value={type.value}>{type.label}</Option>
+              ))}
             </Select>
           </Col>
           <Col>

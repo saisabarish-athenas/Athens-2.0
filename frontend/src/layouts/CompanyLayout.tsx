@@ -8,6 +8,7 @@ import { menuByRole } from '../components/layout/menuConfig'
 import { useEnabledModules } from '../hooks/useEnabledModules'
 import { apiClient } from '../lib/api'
 import tokenManager from '../lib/tokenManager'
+import { App as AntdApp } from 'antd'
 
 const CompanyLayout: React.FC = () => {
   const navigate = useNavigate()
@@ -145,13 +146,15 @@ const CompanyLayout: React.FC = () => {
         />
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 flex flex-col">
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="max-w-[1600px] mx-auto px-6 py-6">
-              <Outlet />
+          <main className="flex-1 min-w-0 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="max-w-[1600px] mx-auto px-6 py-6">
+                <AntdApp>
+                  <Outlet />
+                </AntdApp>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
       </div>
     </div>
   )

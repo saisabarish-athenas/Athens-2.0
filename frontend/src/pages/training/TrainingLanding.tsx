@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Select, Spin, Tag, List as AntList, Button } from 'antd';
 import { SafetyOutlined, ClockCircleOutlined, CheckCircleOutlined, TeamOutlined, CalendarOutlined } from '@ant-design/icons';
+import { apiClient } from '../../lib/api';
+import { getTrainingTypeMeta, TRAINING_TYPES } from './trainingTypes';
 
 const { Option } = Select;
 
@@ -10,16 +12,49 @@ const TrainingLanding: React.FC = () => {
   const [dateRange, setDateRange] = useState('30');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  const mockData = {
-    total: 45,
-    induction: 28,
-    job: 17,
-    completed: 38,
-    upcoming: 7,
-    totalAttendees: 342
-  };
+  useEffect(() => {
+    setLoading(true);
+    apiClient.get('/api/tbt/list/')
+      .then(res => {
+        const data = res.data?.results ?? res.data;
+        const mappedData = Array.isArray(data) ? data.map((training: any) => ({
+          ...training,
+          training_type: training.training_type || training.trainingType || 'toolbox_training',
+          trainingType: training.trainingType || training.training_type || 'toolbox_training',
+        })) : [];
+        console.log('[TrainingLanding] fetched list values:', mappedData.map((training: any) => ({
+          id: training.id,
+          training_type: training.training_type,
+          trainingType: training.trainingType,
+        })));
+        setTrainings(mappedData);
+      })
+      .catch(() => setTrainings([]))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const metrics = useMemo(() => mockData, []);
+  const metrics = useMemo(() => {
+    const filteredTrainings = trainings.filter(training => {
+      if (typeFilter !== 'all' && training.training_type !== typeFilter) return false;
+      if (!training.date) return true;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - Number(dateRange));
+      return new Date(training.date) >= cutoff;
+    });
+
+    return {
+      total: filteredTrainings.length,
+      byType: TRAINING_TYPES.reduce<Record<string, number>>((acc, type) => {
+        acc[type.value] = filteredTrainings.filter(training => training.training_type === type.value).length;
+        return acc;
+      }, {}),
+      completed: filteredTrainings.filter(training => training.status === 'completed').length,
+      upcoming: filteredTrainings.filter(training => training.status === 'planned').length,
+      totalAttendees: filteredTrainings.reduce((sum, training) => (
+        sum + (training.attendance_records?.length || 0)
+      ), 0),
+    };
+  }, [dateRange, trainings, typeFilter]);
 
   if (loading) {
     return (
@@ -33,7 +68,7 @@ const TrainingLanding: React.FC = () => {
     <div style={{ padding: '24px' }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <p style={{ margin: 0, color: '#8c8c8c' }}>Track induction and job-specific training sessions</p>
+        <p style={{ margin: 0, color: '#8c8c8c' }}>Track inspection, job, induction, safety, and toolbox training sessions</p>
       </div>
 
       {/* Filters */}
@@ -52,8 +87,9 @@ const TrainingLanding: React.FC = () => {
             <span>Type:</span>
             <Select value={typeFilter} onChange={setTypeFilter} style={{ width: 150 }}>
               <Option value="all">All</Option>
-              <Option value="induction">Induction</Option>
-              <Option value="job">Job Training</Option>
+              {TRAINING_TYPES.map(type => (
+                <Option key={type.value} value={type.value}>{type.label}</Option>
+              ))}
             </Select>
           </div>
           
@@ -78,10 +114,10 @@ const TrainingLanding: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="Induction"
-              value={metrics.induction}
+              title="Inspection Training"
+              value={metrics.byType.inspection_training || 0}
               prefix={<TeamOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#13c2c2' }}
             />
           </Card>
         </Col>
@@ -89,7 +125,7 @@ const TrainingLanding: React.FC = () => {
           <Card>
             <Statistic
               title="Job Training"
-              value={metrics.job}
+              value={metrics.byType.job_training || 0}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />
@@ -105,6 +141,20 @@ const TrainingLanding: React.FC = () => {
             />
           </Card>
         </Col>
+      </Row>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        {TRAINING_TYPES.filter(type => !['inspection_training', 'job_training'].includes(type.value)).map(type => (
+          <Col xs={24} sm={12} md={6} key={type.value}>
+            <Card>
+              <Statistic
+                title={type.label}
+                value={metrics.byType[type.value] || 0}
+                prefix={<SafetyOutlined />}
+              />
+            </Card>
+          </Col>
+        ))}
       </Row>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -129,6 +179,23 @@ const TrainingLanding: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {trainings.length > 0 && (
+        <Card title="Recent Training Types" style={{ marginTop: '24px' }}>
+          <AntList
+            dataSource={trainings.slice(0, 5)}
+            renderItem={(training: any) => {
+              const meta = getTrainingTypeMeta(training.training_type);
+              return (
+                <AntList.Item>
+                  <span>{training.title}</span>
+                  <Tag color={meta.color}>{meta.label}</Tag>
+                </AntList.Item>
+              );
+            }}
+          />
+        </Card>
+      )}
 
       {/* Empty State */}
       {trainings.length === 0 && !loading && (

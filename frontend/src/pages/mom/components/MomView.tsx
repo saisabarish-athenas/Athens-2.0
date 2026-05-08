@@ -51,7 +51,7 @@ const MomView: React.FC = () => {
         title="Meeting Details"
         subtitle="View meeting information"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'View Meeting' }
         ]}
       >
@@ -68,7 +68,7 @@ const MomView: React.FC = () => {
         title="Meeting Details"
         subtitle="Meeting not found"
         breadcrumbs={[
-          { title: 'MOM', href: '/dashboard/mom' },
+          { title: 'MOM', href: '/app/mom' },
           { title: 'View Meeting' }
         ]}
       >
@@ -85,7 +85,7 @@ const MomView: React.FC = () => {
       title={mom.title}
       subtitle="Meeting details and participants"
       breadcrumbs={[
-        { title: 'MOM', href: '/dashboard/mom' },
+        { title: 'MOM', href: '/app/mom' },
         { title: 'View Meeting' }
       ]}
     >

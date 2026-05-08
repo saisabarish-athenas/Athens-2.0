@@ -208,11 +208,16 @@ class PermitViewSet(AuditLogMixin, PTWBaseViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError("User must be assigned to a project to create permits.")
         
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[PTW CREATE] user={self.request.user.id} user_type={getattr(self.request.user,'user_type',None)} project={user_project.id}")
+        
         with transaction.atomic():
             permit = serializer.save(
                 created_by=self.request.user,
                 project=user_project
             )
+            logger.info(f"[PTW CREATE] saved permit id={permit.id} number={permit.permit_number} status={permit.status}")
             
             # Set current user as context for audit logging
             permit._current_user = self.request.user

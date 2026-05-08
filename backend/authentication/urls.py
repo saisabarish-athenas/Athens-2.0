@@ -2,7 +2,8 @@ from django.urls import path, include
 from .views import (
     unified_login, token_refresh, logout, list_users,
     dashboard_overview, get_projects, get_admin_users,
-    reset_user_password, toggle_user_status, my_permissions
+    reset_user_password, toggle_user_status, my_permissions,
+    list_notifications, create_notification, mark_notifications_read, notification_stats,
 )
 from .company_settings import (
     company_details, upload_logo, company_documents, delete_document
@@ -46,6 +47,9 @@ urlpatterns = [
     # ProjectAdmin endpoints
     path("projectadmin/", include('authentication.projectadmin.urls')),
 
-    # Active users list (for MOM participants, etc.)
-    path("users/", list_users, name='list-users-public'),
+    # Notifications
+    path("notifications/", list_notifications, name='notifications-list'),
+    path("notifications/create/", create_notification, name='notifications-create'),
+    path("notifications/mark-read/", mark_notifications_read, name='notifications-mark-read'),
+    path("notifications/stats/", notification_stats, name='notifications-stats'),
 ]
