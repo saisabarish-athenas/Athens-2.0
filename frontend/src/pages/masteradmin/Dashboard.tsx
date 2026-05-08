@@ -26,9 +26,16 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true)
       const data = await masterAdminService.getDashboardStats()
-      setStats(data)
+      setStats(data ?? null)
     } catch (err: any) {
-      setError(err.message || 'Failed to load dashboard stats')
+      const code = err?.code
+      // Auth token errors are handled globally by the interceptor — don't surface them
+      if (code === 'NO_VALID_AUTH_TOKEN' || code === 'NO_AUTH_TOKEN') {
+        setError(null)
+      } else {
+        const msg = err?.response?.data?.detail || err?.response?.data?.message || err?.message
+        setError(typeof msg === 'string' ? msg : 'Failed to load dashboard stats')
+      }
     } finally {
       setLoading(false)
     }

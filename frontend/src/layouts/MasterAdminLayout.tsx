@@ -1,15 +1,50 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { 
-  Settings, LogOut, Menu, Bell, AlertTriangle
-} from 'lucide-react'
+import { Settings, LogOut, Menu, Bell, AlertTriangle } from 'lucide-react'
 import { ThemeToggle } from '../components/theme/ThemeToggle'
 import { SapSidebar } from '../components/layout/SapSidebar'
 import { menuByRole } from '../components/layout/menuConfig'
 import { apiClient } from '../lib/api'
 import { useOnboardingGuard } from '../hooks/useOnboardingGuard'
 
+// ─── Outlet Error Boundary ────────────────────────────────────────────────────
+interface EBState { hasError: boolean; message: string }
+class OutletErrorBoundary extends React.Component<{ children: React.ReactNode }, EBState> {
+  state: EBState = { hasError: false, message: '' }
+
+  static getDerivedStateFromError(err: Error): EBState {
+    return { hasError: true, message: err?.message || 'Unknown render error' }
+  }
+
+  componentDidCatch(err: Error, info: React.ErrorInfo) {
+    console.error('[MasterAdmin] Outlet crash:', err, info)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-64 gap-4 p-8 text-center">
+          <div className="text-red-500 text-lg font-semibold">
+            Failed to load this module.
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg max-w-lg break-all">
+            {this.state.message}
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, message: '' })}
+            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
 const MasterAdminLayout: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -17,25 +52,36 @@ const MasterAdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tenantName, setTenantName] = useState<string | null>(null)
 
-  // Onboarding guard — skip for setup/waiting pages
   const bypassPaths = ['/master-admin/company-setup', '/master-admin/waiting']
   const guardStatus = useOnboardingGuard()
   const isBypass = bypassPaths.some(p => location.pathname.startsWith(p))
 
   const sidebarItems = menuByRole.masteradmin()
 
+  // Fetch tenant name once per user identity — use user id as dep, not the whole object
+  const userId = (user as any)?.id ?? null
+  const tenantFetchedRef = useRef(false)
   useEffect(() => {
-    if (hydrated && user?.athens_tenant_id && !tenantName) {
-      fetchTenantName()
-    }
-  }, [hydrated, user?.athens_tenant_id])
+    if (!hydrated || !userId || tenantFetchedRef.current) return
+    tenantFetchedRef.current = true
+    apiClient.get('/api/auth/masteradmin/my-tenant/')
+      .then(res => {
+        if (res.data?.name) setTenantName(res.data.name)
+      })
+      .catch(() => {
+        setTenantName(user?.company_name || null)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, userId])
 
-  // Fetch subscription status on mount if not already loaded
+  // Fetch subscription once per user identity — NOT on every render
+  const subFetchedRef = useRef(false)
   useEffect(() => {
-    if (hydrated && user?.user_type === 'masteradmin' && !subscription) {
-      fetchSubscriptionStatus()
-    }
-  }, [hydrated, user])
+    if (!hydrated || user?.user_type !== 'masteradmin' || subscription || subFetchedRef.current) return
+    subFetchedRef.current = true
+    fetchSubscriptionStatus()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, userId])
 
   // Redirect to subscription-expired if inactive
   useEffect(() => {
@@ -46,18 +92,7 @@ const MasterAdminLayout: React.FC = () => {
     ) {
       navigate('/subscription-expired', { replace: true })
     }
-  }, [subscription, location.pathname])
-
-  const fetchTenantName = async () => {
-    try {
-      const response = await apiClient.get('/api/auth/masteradmin/my-tenant/')
-      if (response.data && response.data.name) {
-        setTenantName(response.data.name)
-      }
-    } catch (error) {
-      setTenantName(user?.company_name || null)
-    }
-  }
+  }, [subscription?.is_active, location.pathname, navigate])
 
   const handleLogout = () => {
     logout()
@@ -72,7 +107,6 @@ const MasterAdminLayout: React.FC = () => {
     )
   }
 
-  // Show spinner while guard is checking (only for non-bypass pages)
   if (!isBypass && guardStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -129,7 +163,8 @@ const MasterAdminLayout: React.FC = () => {
             <ThemeToggle />
             <button
               onClick={() => navigate('/master-admin/settings')}
-              className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative">
+              className="p-2 text-muted-foreground hover:bg-accent/50 rounded-full transition-all relative"
+            >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" />
             </button>
@@ -146,7 +181,9 @@ const MasterAdminLayout: React.FC = () => {
                 {user?.email?.[0]?.toUpperCase() || 'M'}
               </div>
               <div className="hidden md:block">
-                <div className="text-xs font-medium text-foreground leading-tight">{user?.email?.split('@')[0] || 'master'}</div>
+                <div className="text-xs font-medium text-foreground leading-tight">
+                  {user?.email?.split('@')[0] || 'master'}
+                </div>
                 <div className="text-[10px] text-muted-foreground">Master Admin</div>
               </div>
             </div>
@@ -162,7 +199,6 @@ const MasterAdminLayout: React.FC = () => {
 
       {/* Main Layout Container */}
       <div className="flex flex-1 min-h-0">
-        {/* Sidebar - Fixed scroll container */}
         <SapSidebar
           title="Navigation"
           subtitle="Master Admin"
@@ -171,11 +207,13 @@ const MasterAdminLayout: React.FC = () => {
           onMobileClose={() => setSidebarOpen(false)}
         />
 
-        {/* Main Content - Independent scroll container */}
         <main className="flex-1 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="max-w-[1600px] mx-auto px-6 py-6">
-              <Outlet />
+              {/* Error boundary isolates child page crashes from the layout */}
+              <OutletErrorBoundary>
+                <Outlet />
+              </OutletErrorBoundary>
             </div>
           </div>
         </main>

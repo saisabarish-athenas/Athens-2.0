@@ -40,6 +40,9 @@ urlpatterns = [
 # PTW routes
 urlpatterns.insert(7, path('api/ptw/', include('ptw.urls')))
 
+# Admin Attendance routes
+urlpatterns += [path('api/admin-attendance/', include('admin_attendance.urls'))]
+
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

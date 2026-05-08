@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, FileText, Settings, Bell, Shield, Lock,
   FolderOpen, Menu, Briefcase, UserCheck, ClipboardList, 
   Calendar, AlertTriangle, BookOpen, HardHat, Eye, 
-  CheckSquare, MessageSquare, Mic, Bot, Package, Zap
+  CheckSquare, MessageSquare, Mic, Bot, Package, Zap, Clock
 } from 'lucide-react'
 
 export type MenuRole = 'superadmin' | 'masteradmin' | 'companyuser'
@@ -57,6 +57,7 @@ const ATHENS_MENU_ITEMS: MenuItem[] = [
   // Administration (MasterAdmin)
   { label: 'Projects', description: 'Manage projects', href: '/projects', icon: FolderOpen, roles: ['masteradmin'] },
   { label: 'Admin Users', description: 'Manage admin users', href: '/admin-users', icon: Users, roles: ['masteradmin'] },
+  { label: 'Admin Attendance', description: 'Monitor admin attendance', href: '/admin-attendance', icon: Clock, roles: ['masteradmin'] },
   { label: 'Menu Management', description: 'Configure modules', href: '/menu-management', icon: Menu, roles: ['masteradmin'] },
   
   // System Administration (SuperAdmin)

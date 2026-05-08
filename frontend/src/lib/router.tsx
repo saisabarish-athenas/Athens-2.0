@@ -12,7 +12,7 @@ export const ROUTE_PATHS = [
   '/superadmin/tenants', '/superadmin/masters', '/superadmin/subscriptions', '/superadmin/audit-logs',
   '/superadmin/configuration', '/superadmin/notifications', '/superadmin/settings',
   '/master-admin', '/master-admin/projects', '/master-admin/admin-users', 
-  '/master-admin/menu-management', '/master-admin/settings',
+  '/master-admin/admin-attendance', '/master-admin/menu-management', '/master-admin/settings',
   '/app', '/company/detailed-info', '/company/waiting-approval', '/company/services',
   '/app/inspection', '/app/inspection/list', '/app/inspection/create',
   '/company', '/company/athens/password-reset', '/company/athens/profile',
@@ -57,6 +57,7 @@ const MasterAdminMenuManagement = React.lazy(() => import('../pages/masteradmin/
 const MasterAdminSettings = React.lazy(() => import('../pages/masteradmin/Settings'))
 const MasterAdminServices = React.lazy(() => import('../pages/masteradmin/Services'))
 const MasterAdminErgon = React.lazy(() => import('../pages/masteradmin/Ergon'))
+const MasterAdminAdminAttendance = React.lazy(() => import('../pages/masteradmin/AdminAttendancePage'))
 const CompanySetupPage = React.lazy(() => import('../pages/masteradmin/CompanySetupPage'))
 const WaitingApprovalPage = React.lazy(() => import('../pages/masteradmin/WaitingApprovalPage'))
 // ERGON Components
@@ -501,6 +502,7 @@ export const AppRouter: React.FC = () => {
         <Route path="projects" element={<SuspenseWrapper><MasterAdminProjects /></SuspenseWrapper>} />
         <Route path="projects/:projectId/modules" element={<SuspenseWrapper><MasterAdminProjectModules /></SuspenseWrapper>} />
         <Route path="admin-users" element={<SuspenseWrapper><MasterAdminAdminUsers /></SuspenseWrapper>} />
+        <Route path="admin-attendance" element={<SuspenseWrapper><MasterAdminAdminAttendance /></SuspenseWrapper>} />
         <Route path="menu-management" element={<SuspenseWrapper><MasterAdminMenuManagement /></SuspenseWrapper>} />
         <Route path="settings" element={<SuspenseWrapper><MasterAdminSettings /></SuspenseWrapper>} />
       </Route>

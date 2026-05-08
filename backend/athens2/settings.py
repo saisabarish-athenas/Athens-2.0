@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'quality',
     'chatbox',
     'ptw',
+    'admin_attendance',
 ]
 
 MIDDLEWARE = [
